@@ -1,12 +1,24 @@
 from socket import *
 
-clientSock = socket(AF_INET, SOCK_STREAM)
-clientSock.connect(('127.0.0.1', 8080))
+client_sock = socket(AF_INET, SOCK_STREAM)
 
-print('연결 확인 됐습니다.')
-clientSock.send('I am a client'.encode('utf-8'))
+server_addr = ('127.0.0.1', 8080)
+client_sock.connect(server_addr)
+print('{},{} 연결 됐습니다.'.format(*server_addr))
 
-print('메시지를 전송했습니다.')
+try:
+    while True:
+        data = input('')
+        if data == 'q':
+            break
+        data = data.encode('cp949')
+        client_sock.send(data)
+        print('메시지를 전송했습니다.')
 
-data = clientSock.recv(1024)
-print('받은 데이터 : ', data.decode('utf-8'))
+        recv_data = client_sock.recv(1024)
+        print(recv_data.decode('cp949'))
+
+except Exception as e:
+    print("오류 발생:", e)
+finally:
+    client_sock.close()
