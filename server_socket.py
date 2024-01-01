@@ -3,9 +3,10 @@ import threading
 
 client_count = 0
 lock = threading.Lock()
+is_server_running = True
 
 def multi_client(client_sock, client_addr, client_count_lock):
-    global client_count
+    global client_count, is_server_running
 
     with client_count_lock:
         client_count += 1
@@ -25,6 +26,7 @@ def multi_client(client_sock, client_addr, client_count_lock):
         client_count -= 1
         if client_count == 0:
             print("모든 클라이언트 연결 종료, 서버 종료;")
+            is_server_running = False
             server_sock.close()
 
 server_sock = socket(AF_INET, SOCK_STREAM)
@@ -35,13 +37,17 @@ server_sock.bind(server_addr)
 server_sock.listen()
 
 try:
-    while True:
-        client_sock, client_addr = server_sock.accept()
-        client_thread = threading.Thread(target=multi_client, args=(client_sock, client_addr, lock))
-        client_thread.start()
+    while is_server_running:
+        try:
+            client_sock, client_addr = server_sock.accept()
+            if not is_server_running:
+                break
+            client_thread = threading.Thread(target=multi_client, args=(client_sock, client_addr, lock))
+            client_thread.start()
+        except OSError:
+            break
 except Exception as e:
     print("서버 오류:", e)
 finally:
-    if server_sock:
-        server_sock.close()
+    server_sock.close()
     print("서버 종료")
