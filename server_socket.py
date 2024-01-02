@@ -28,7 +28,7 @@ class ChatServer:
                 except OSError:
                     break
         except Exception as e:
-            print("서버 오류:", e)
+            print(f"서버 오류:{e}", )
         finally:
             self.server_sock.close()
             print("서버 종료")
@@ -39,24 +39,35 @@ class ChatServer:
             self.clients.append(client_sock)
 
         print(f'{client_addr}에서 접속이 확인됐습니다.')
-        while True:
-            data = client_sock.recv(1024)
-            if not data:
-                print('클라이언트 연결 종료:', client_addr)
-                break
-            data = data.decode('cp949')
-            print(f'({client_addr}) 받은 데이터:', data)
-            client_sock.send(f'{data} has received.'.encode('cp949'))
+        try:
+            while True:
+                data = client_sock.recv(1024)
+                if not data or data.decode('cp949') == 'quit_sign':
+                    client_sock.send('채팅에서 퇴장하셨습니다.'.encode('cp949'))
+                    print(f'클라이언트 연결 종료:{client_addr}')
+                    break
+                data = data.decode('cp949')
+                print(f'({client_addr}) 받은 데이터: {data}')
+                self.broadcast_message(data, client_sock)
+        except Exception as e:
+            print(f'오류 발생: {e}')
+        finally:
+            client_sock.close()
+            with self.lock:
+                self.client_count -= 1
+                self.clients.remove(client_sock)
+                if self.client_count == 0:
+                    print("모든 클라이언트 연결 종료, 서버 종료;")
+                    self.is_server_running = False
+                    self.server_sock.close()
 
-        client_sock.close()
-        with self.lock:
-            self.client_count -= 1
-            self.clients.remove(client_sock)
-            if self.client_count == 0:
-                print("모든 클라이언트 연결 종료, 서버 종료;")
-                self.is_server_running = False
-                self.server_sock.close()
-
+    def broadcast_message(self, message, sender_sock):
+        for client in self.clients:
+            if client != sender_sock:
+                try:
+                    client.send(message.encode('cp949'))
+                except Exception as e:
+                    print(f'메시지 전송 중 오류: {e}')
 if __name__ == "__main__":
     chat_server = ChatServer()
     chat_server.start_server()
