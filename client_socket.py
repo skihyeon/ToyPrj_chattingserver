@@ -9,6 +9,8 @@ class ChatClient:
     def connect_to_server(self):
         try:
             self.client_sock.connect(self.server_addr)
+            nickname = input("Enter your nickname: ")
+            self.client_sock.send(nickname.encode('cp949')) 
             print(f'Connected to {self.server_addr[0]}:{self.server_addr[1]}')
 
             receive_thread = threading.Thread(target=self.receive_data)
